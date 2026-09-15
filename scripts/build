@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONTAINER_NAME="focusguard-dev"
+IMAGE_NAME="ghcr.io/cirruslabs/flutter:3.24.3"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+echo "==> [build] Building FocusGuard production release artifacts..."
+
+CMD='
+mkdir -p build/outputs
+flutter build apk --release --no-tree-shake-icons
+if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+  cp build/app/outputs/flutter-apk/app-release.apk build/outputs/focusguard-release.apk
+  sha256sum build/outputs/focusguard-release.apk > build/outputs/focusguard-release.apk.sha256
+  echo "==> [build] Successfully generated build/outputs/focusguard-release.apk"
+  ls -lh build/outputs/focusguard-release.apk
+fi
+'
+
+if [ -f "/workspace/pubspec.yaml" ]; then
+  eval "$CMD"
+else
+  if podman ps --filter "name=^${CONTAINER_NAME}$" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    podman exec -w /workspace "${CONTAINER_NAME}" bash -c "$CMD"
+  else
+    podman run --rm \
+      -v "${WORKSPACE_DIR}:/workspace:Z" \
+      -w /workspace \
+      "${IMAGE_NAME}" \
+      bash -c "$CMD"
+  fi
+fi
+
+echo "==> [build] Release build completed."

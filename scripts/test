@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONTAINER_NAME="focusguard-dev"
+IMAGE_NAME="ghcr.io/cirruslabs/flutter:3.24.3"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+echo "==> [test] Running FocusGuard Automated Test Suite..."
+
+if [ -f "/workspace/pubspec.yaml" ]; then
+  # Running inside container
+  flutter test --reporter=expanded "$@"
+else
+  # Running on host via Podman
+  if podman ps --filter "name=^${CONTAINER_NAME}$" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    podman exec -w /workspace "${CONTAINER_NAME}" flutter test --reporter=expanded "$@"
+  else
+    podman run --rm \
+      -v "${WORKSPACE_DIR}:/workspace:Z" \
+      -w /workspace \
+      "${IMAGE_NAME}" \
+      flutter test --reporter=expanded "$@"
+  fi
+fi
+
+echo "==> [test] All tests completed successfully."

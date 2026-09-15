@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONTAINER_NAME="focusguard-dev"
+
+echo "==> [dev-down] Stopping and removing FocusGuard development container..."
+
+if podman ps -a --filter "name=^${CONTAINER_NAME}$" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+  podman stop -t 2 "${CONTAINER_NAME}" || true
+  podman rm "${CONTAINER_NAME}" || true
+  echo "Container ${CONTAINER_NAME} stopped and removed."
+else
+  echo "Container ${CONTAINER_NAME} was not running."
+fi

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONTAINER_NAME="focusguard-dev"
+IMAGE_NAME="ghcr.io/cirruslabs/flutter:3.24.3"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+echo "==> [coverage] Running tests with code coverage collection..."
+
+CMD='
+rm -rf coverage/
+flutter test --coverage
+if [ -f "coverage/lcov.info" ]; then
+  echo "==> Calculating test coverage percentage..."
+  TOTAL_LINES=$(grep -E "^DA:[0-9]+,[0-9]+" coverage/lcov.info | wc -l || true)
+  HIT_LINES=$(grep -E "^DA:[0-9]+,[1-9][0-9]*" coverage/lcov.info | wc -l || true)
+  if [ "$TOTAL_LINES" -gt 0 ]; then
+    COVERAGE_PCT=$(awk -v hit="$HIT_LINES" -v tot="$TOTAL_LINES" "BEGIN { printf \"%.2f\", (hit/tot)*100 }")
+    echo "========================================="
+    echo "  Total Instrumented Lines : $TOTAL_LINES"
+    echo "  Lines Covered            : $HIT_LINES"
+    echo "  Overall Code Coverage    : ${COVERAGE_PCT}%"
+    echo "========================================="
+    
+    # Check >= 90% threshold
+    THRESHOLD_MET=$(awk -v cov="$COVERAGE_PCT" "BEGIN { print (cov >= 90.0) ? 1 : 0 }")
+    if [ "$THRESHOLD_MET" -eq 1 ]; then
+      echo "==> [coverage] PASS: Coverage ${COVERAGE_PCT}% meets or exceeds required 90.0% threshold."
+    else
+      echo "==> [coverage] FAIL: Coverage ${COVERAGE_PCT}% is below required 90.0% threshold!"
+      exit 1
+    fi
+  else
+    echo "No instrumented lines found."
+    exit 1
+  fi
+else
+  echo "Coverage file not generated."
+  exit 1
+fi
+'
+
+if [ -f "/workspace/pubspec.yaml" ]; then
+  eval "$CMD"
+else
+  if podman ps --filter "name=^${CONTAINER_NAME}$" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    podman exec -w /workspace "${CONTAINER_NAME}" bash -c "$CMD"
+  else
+    podman run --rm \
+      -v "${WORKSPACE_DIR}:/workspace:Z" \
+      -w /workspace \
+      "${IMAGE_NAME}" \
+      bash -c "$CMD"
+  fi
+fi

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONTAINER_NAME="focusguard-dev"
+IMAGE_NAME="ghcr.io/cirruslabs/flutter:3.24.3"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+echo "==> [dev-up] Starting FocusGuard development container..."
+
+# Check if container already running
+if podman ps --filter "name=${CONTAINER_NAME}" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+  echo "Container ${CONTAINER_NAME} is already running."
+  exit 0
+fi
+
+# Check if container exists but stopped
+if podman ps -a --filter "name=${CONTAINER_NAME}" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+  echo "Resuming existing stopped container ${CONTAINER_NAME}..."
+  podman start "${CONTAINER_NAME}"
+  exit 0
+fi
+
+echo "Creating new container ${CONTAINER_NAME}..."
+podman run -d \
+  --name "${CONTAINER_NAME}" \
+  -v "${WORKSPACE_DIR}:/workspace:Z" \
+  -w /workspace \
+  "${IMAGE_NAME}" \
+  tail -f /dev/null
+
+echo "Container ${CONTAINER_NAME} started successfully."

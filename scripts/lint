@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONTAINER_NAME="focusguard-dev"
+IMAGE_NAME="ghcr.io/cirruslabs/flutter:3.24.3"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+echo "==> [lint] Checking code formatting and static analysis..."
+
+CMD="dart format --set-exit-if-changed lib test && flutter analyze"
+
+if [ -f "/workspace/pubspec.yaml" ]; then
+  eval "$CMD"
+else
+  if podman ps --filter "name=^${CONTAINER_NAME}$" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    podman exec -w /workspace "${CONTAINER_NAME}" bash -c "$CMD"
+  else
+    podman run --rm \
+      -v "${WORKSPACE_DIR}:/workspace:Z" \
+      -w /workspace \
+      "${IMAGE_NAME}" \
+      bash -c "$CMD"
+  fi
+fi
+
+echo "==> [lint] Formatting and analysis passed without errors."
