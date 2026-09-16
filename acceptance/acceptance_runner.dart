@@ -98,7 +98,8 @@ void main(List<String> args) async {
     final res = await Process.run('dart', ['run', 'tool/calc_coverage.dart']);
     final output = res.stdout.toString();
     final matchOverall =
-        RegExp(r'OVERALL COVERAGE: ([\d\.]+)%').firstMatch(output);
+        RegExp(r'overall coverage:\s*([\d\.]+)%', caseSensitive: false)
+            .firstMatch(output);
     if (matchOverall != null) {
       final pct = double.tryParse(matchOverall.group(1) ?? '0') ?? 0;
       coverageMetrics['overall'] = pct;
@@ -145,15 +146,21 @@ void main(List<String> args) async {
 
   // Step 8: Capability Matrix Validation
   await runStep('CAP-001', 'Capability Matrix Validation', () async {
-    final capFile = File('lib/domain/models/capability_matrix_entry.dart');
-    if (!capFile.existsSync()) return false;
-    final content = capFile.readAsStringSync();
-    // Validate classifications
-    final hasVerified = content.contains('verified');
-    final hasEmulator = content.contains('emulatorVerified');
-    final hasHardware = content.contains('hardwareRequired');
-    final hasUnsupported = content.contains('platformUnsupported');
-    return hasVerified && hasEmulator && hasHardware && hasUnsupported;
+    final capFile = File('lib/platform/capability_matrix.dart');
+    final enumFile = File('lib/domain/models/enums.dart');
+    if (!capFile.existsSync() || !enumFile.existsSync()) return false;
+    final capContent = capFile.readAsStringSync();
+    final enumContent = enumFile.readAsStringSync();
+    // Validate classifications exist in domain enums and capability matrix
+    final hasVerified =
+        enumContent.contains('VERIFIED') && capContent.contains('VERIFIED');
+    final hasDeviceVerified = enumContent.contains('DEVICE_VERIFIED') &&
+        capContent.contains('DEVICE_VERIFIED');
+    final hasHardware = enumContent.contains('HARDWARE_REQUIRED') &&
+        capContent.contains('HARDWARE_REQUIRED');
+    final hasUnsupported = enumContent.contains('PLATFORM_UNSUPPORTED') &&
+        capContent.contains('PLATFORM_UNSUPPORTED');
+    return hasVerified && hasDeviceVerified && hasHardware && hasUnsupported;
   });
 
   // Step 9: Documentation Completeness (25 Markdown Files)

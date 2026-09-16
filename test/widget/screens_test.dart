@@ -143,7 +143,7 @@ void main() {
         MaterialApp(
           home: AppSelectionScreen(
             installedApps: apps,
-            initialBlockedPackages: {'com.instagram.android'},
+            initialBlockedPackages: const {'com.instagram.android'},
             onSaveBlockedPackages: (_) {},
           ),
         ),

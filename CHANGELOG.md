@@ -50,3 +50,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Complete 25-file synchronized documentation suite.
   - Automated production certification runner (`acceptance/acceptance_runner.dart`).
 
+---
+
+## [1.0.1] - 2026-09-16
+
+### Fixed
+- Enforced `prefer_const_constructors` and `prefer_const_literals_to_create_immutables` in widget and unit test suites.
+- Synchronized capability matrix validation in `acceptance_runner.dart` with domain enumeration constants.
+- Updated coverage threshold regex parsing in acceptance runner for case-insensitive matching.
+- Verified 100% clean execution of the full acceptance test suite (`CERTIFIED` status across all 9 quality gates).
+
+

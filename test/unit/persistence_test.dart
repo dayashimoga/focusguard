@@ -119,13 +119,13 @@ void main() {
 
   group('Persistence: AuditRepository', () {
     test('logs audit events and retrieves in chronological order', () async {
-      final entry1 = AuditEntry(
+      const entry1 = AuditEntry(
         id: '1',
         timestampMs: 1000,
         eventType: 'session_start',
         description: 'Session started',
       );
-      final entry2 = AuditEntry(
+      const entry2 = AuditEntry(
         id: '2',
         timestampMs: 2000,
         eventType: 'session_complete',
