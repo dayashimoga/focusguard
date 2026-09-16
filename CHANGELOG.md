@@ -82,4 +82,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Verified 100% clean execution of the full acceptance test suite (`CERTIFIED` status across all 9 quality gates).
 
+---
+
+## [1.2.0] - 2026-09-16
+
+### Fixed
+- **P0 Deep Focus Exit Defect**: Resolved issue where entering an invalid or mistyped confirmation phrase exposed an unhandled `Bad state: The entered phrase does not match the safety confirmation phrase` domain exception.
+- **Typed Domain Exceptions**: Introduced `DomainException`, `OverrideValidationException`, `SessionTransitionException`, and `PlatformEnforcementException` in `lib/core/errors/domain_exceptions.dart`, ensuring technical details are safely kept in internal diagnostics while user-facing UI displays clear, friendly error messages.
+- **Dynamic Policy Derivation**: Upgraded `ExitFocusDialog` to derive friction requirements dynamically from the active `OverridePolicy`. Only required friction controls (phrase, reason, PIN, cooldown) are rendered.
+- **Whitespace & Case Normalization**: Added automatic trimming of leading/trailing whitespace on user input and case-exact phrase matching with clear inline error messaging: `Phrase doesn't match. Type the confirmation phrase exactly.`
+- **Atomic Exit State Transitions**: Implemented multi-stage transition path `ACTIVE` -> `OVERRIDE_REQUESTED` -> `OVERRIDE_VALIDATING` -> `ENDING` -> `OVERRIDDEN` in `FocusEngine.endSessionWithOverride`, with safe rollback to `ACTIVE` upon validation failure, double-tap serialization, and guaranteed cleanup of platform restrictions.
+- **Non-Existent Timers on Close**: Resolved pending timer leakage in `ExitFocusDialog` by making the copy-notice timer explicitly cancellable on dialog disposal.
+
+### Added
+- **Real OS Enforcement Test Suite**: Implemented `test/integration/real_os_enforcement_test.dart` validating package transitions, shield barriers, allowlist bypassing, break cycle unblocking, reboot recovery, process death survival, Doze immunity, permission degradation, and device owner isolation (`ENF-OS-001`, `EXIT-OS-001..004`, `BOOT-OS-001`, `PROC-OS-001`, `PERM-OS-001`, `DOZE-OS-001`, `MNG-OS-001`).
+- **Exit & Override Reliability Test Suite**: Implemented `test/integration/exit_override_reliability_test.dart` asserting exact bug reproduction, Unicode handling, keyboard safety, and double-tap exit prevention.
+- **Deterministic Test Fixtures**: Created `tool/generate_fixtures.py` producing `focusguard-test-blocked.apk` (953 bytes) and `focusguard-test-allowed.apk` (947 bytes).
+- **Local Multi-Target Build Orchestrator**: Added `tool/build_all.dart`, `build-all`, `build-all.ps1`, `test-all`, and `test-all.ps1` emitting `build/outputs/build_manifest.json` with cryptographic SHA-256 hashes.
+- **Apple Screen Time Entitlements**: Added `ios/Runner/Runner.entitlements` configuring `com.apple.developer.family-controls`.
+- **Extended 35-Gate Acceptance Suite**: Upgraded `acceptance/acceptance_runner.dart` to validate Level 1 (Software Quality), Level 2 (OS Integration), and Level 3 (Physical Device) requirements, producing `acceptance.json` and `acceptance.html`.
+
 

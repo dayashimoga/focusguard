@@ -32,14 +32,41 @@ enum SessionState {
   /// Temporary pause/break with separate break countdown running.
   onBreak,
 
-  /// User successfully unlocked session via configured override policy.
+  /// Override transaction initiated by user.
+  overrideRequested,
+
+  /// Override friction / credentials being validated.
+  overrideValidating,
+
+  /// Restrictions being lifted, timers cancelled, and state persisted.
+  ending,
+
+  /// User successfully unlocked session via configured override policy (ended via override).
   overridden,
 
-  /// Focus session completed its full duration naturally.
+  /// Focus session completed its full duration naturally (ended normal).
   completed,
 
   /// Session explicitly terminated by user before activation.
   cancelled,
+
+  /// Monotonic countdown reached target and natural completion initiated.
+  expired;
+
+  /// Whether the session is actively enforcing restrictions.
+  bool get isEnforcing => this == SessionState.active;
+
+  /// Whether the session is in a terminal ended state.
+  bool get isTerminal =>
+      this == SessionState.overridden ||
+      this == SessionState.completed ||
+      this == SessionState.cancelled;
+
+  /// Whether the session is currently in an exit transition.
+  bool get isTransitioningToExit =>
+      this == SessionState.overrideRequested ||
+      this == SessionState.overrideValidating ||
+      this == SessionState.ending;
 }
 
 /// Override and safety exit mechanisms.

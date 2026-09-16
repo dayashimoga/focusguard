@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../core/constants/app_constants.dart';
+import '../core/errors/domain_exceptions.dart';
 import '../core/security/tamper_detector.dart';
 import '../core/utils/monotonic_time.dart';
 import '../domain/models/audit_entry.dart';
@@ -9,6 +10,7 @@ import '../domain/models/focus_profile.dart';
 import '../domain/models/focus_session.dart';
 import '../domain/models/override_policy.dart';
 import '../domain/state_machine/session_state_machine.dart';
+import '../persistence/session_repository.dart';
 import '../platform/platform_bridge.dart';
 import 'break_manager.dart';
 import 'monotonic_timer.dart';
@@ -18,8 +20,10 @@ import 'override_coordinator.dart';
 class FocusEngine {
   final PlatformBridge platformBridge;
   final int Function() getMonotonicNowMs;
+  final SessionRepository? _sessionRepository;
 
   FocusSession? _currentSession;
+  FocusProfile? _activeProfile;
   final SessionStateMachine _stateMachine = SessionStateMachine();
   MonotonicCountdownTimer? _countdownTimer;
   late final BreakManager _breakManager;
@@ -42,8 +46,10 @@ class FocusEngine {
     required this.platformBridge,
     int Function()? monotonicTimeProvider,
     OverridePolicy? overridePolicy,
-  }) : getMonotonicNowMs =
-            monotonicTimeProvider ?? (() => MonotonicTime.processElapsedMs) {
+    SessionRepository? sessionRepository,
+  })  : getMonotonicNowMs =
+            monotonicTimeProvider ?? (() => MonotonicTime.processElapsedMs),
+        _sessionRepository = sessionRepository {
     _breakManager = BreakManager(monotonicTimeProvider: getMonotonicNowMs);
     _overrideCoordinator =
         OverrideCoordinator(policy: overridePolicy ?? const OverridePolicy());
@@ -115,6 +121,7 @@ class FocusEngine {
     );
 
     _currentSession = session;
+    _activeProfile = profile;
     _stateMachine.transitionTo(session.state);
     _emitSessionUpdate();
 
@@ -285,17 +292,43 @@ class FocusEngine {
     }
   }
 
-  /// Unlocks and terminates the session via configured override friction.
-  Future<void> overrideSession({
+  /// Performs an atomic, guaranteed idempotent exit transaction:
+  /// 1. Verifies not already in an exit transition (prevents double-tap exits and race conditions)
+  /// 2. Progresses state: ACTIVE -> OVERRIDE_REQUESTED -> OVERRIDE_VALIDATING
+  /// 3. Validates friction policy (phrase, reason, PIN, cooldown, quota)
+  ///    - On failure: safely rolls state back to ACTIVE and throws [OverrideValidationException]
+  /// 4. Increments daily used quota
+  /// 5. Audits override event
+  /// 6. Progresses state to ENDING
+  /// 7. Tears down platform restrictions via [platformBridge.stopEnforcement]
+  /// 8. Cancels countdown timers, grace period timer, and ends break
+  /// 9. Persists ended state to SQLite via [SessionRepository]
+  /// 10. Progresses state to OVERRIDDEN (ENDED_OVERRIDE)
+  /// 11. Emits session update
+  Future<bool> endSessionWithOverride({
     required OverrideType type,
     String? typedPhrase,
     String? typedReason,
     String? pin,
   }) async {
     if (_currentSession == null) {
-      throw StateError('No active session to override');
+      throw OverrideValidationException.noActiveSession();
     }
 
+    // Double-tap and race condition guard: If already transitioning to exit, safely return false
+    if (_stateMachine.currentState.isTransitioningToExit) {
+      return false;
+    }
+
+    // 1. Transition to OVERRIDE_REQUESTED -> OVERRIDE_VALIDATING
+    if (_stateMachine.canTransitionTo(SessionState.overrideRequested)) {
+      _stateMachine.transitionTo(SessionState.overrideRequested);
+    }
+    if (_stateMachine.canTransitionTo(SessionState.overrideValidating)) {
+      _stateMachine.transitionTo(SessionState.overrideValidating);
+    }
+
+    // 2. Validate friction against configured policy
     OverrideValidationResult validation;
     switch (type) {
       case OverrideType.immediate:
@@ -331,10 +364,31 @@ class FocusEngine {
     }
 
     if (!validation.isSuccessful) {
-      throw StateError(validation.errorMessage ?? 'Override rejected');
+      // Safe rollback to ACTIVE state on validation failure
+      if (_stateMachine.canTransitionTo(SessionState.active)) {
+        _stateMachine.transitionTo(SessionState.active);
+      }
+      final msg = validation.errorMessage ?? 'Override rejected';
+      if (msg.contains('does not match')) {
+        throw OverrideValidationException.phraseMismatch();
+      } else if (msg.contains('at least 5 characters')) {
+        throw OverrideValidationException.reasonTooShort();
+      } else if (msg.contains('Incorrect PIN')) {
+        throw OverrideValidationException.incorrectPin();
+      } else if (msg.contains('quota')) {
+        throw OverrideValidationException.quotaExhausted(
+          _overrideCoordinator.policy.usedOverridesToday,
+          _overrideCoordinator.policy.maxOverridesPerDay,
+        );
+      } else {
+        throw OverrideValidationException(
+          userMessage: msg,
+          technicalDetail: msg,
+        );
+      }
     }
 
-    // Increment daily used overrides count
+    // 3. Increment daily used overrides count
     final updatedPolicy = _overrideCoordinator.policy.copyWith(
       usedOverridesToday: _overrideCoordinator.policy.usedOverridesToday + 1,
     );
@@ -344,14 +398,60 @@ class FocusEngine {
       storedPinSalt: _overrideCoordinator.storedPinSalt,
     );
 
-    await _terminateSession(SessionState.overridden,
-        reason: typedReason ?? type.name);
-
+    // 4. Audit override
     _emitAudit(
       eventType: 'override',
       description:
           'Session overridden via ${type.name}. Reason: ${typedReason ?? "none"}',
       sessionId: _currentSession?.id,
+    );
+
+    // 5. Mark ENDING
+    if (_stateMachine.canTransitionTo(SessionState.ending)) {
+      _stateMachine.transitionTo(SessionState.ending);
+    }
+
+    // 6. Tear down native restrictions and timers
+    _gracePeriodTimer?.cancel();
+    _countdownTimer?.stop();
+    _breakManager.endBreak();
+    await platformBridge.stopEnforcement();
+
+    // 7. Persist ended state
+    final endedSession = _currentSession!.copyWith(
+      state: SessionState.overridden,
+      overrideReason: typedReason ?? type.name,
+    );
+    _currentSession = endedSession;
+    if (_sessionRepository != null) {
+      try {
+        await _sessionRepository.updateSession(endedSession);
+      } catch (_) {
+        // Tolerant persistence logging; native unblock must never be blocked by DB
+      }
+    }
+
+    // 8. Mark OVERRIDDEN (ENDED_OVERRIDE)
+    if (_stateMachine.canTransitionTo(SessionState.overridden)) {
+      _stateMachine.transitionTo(SessionState.overridden);
+    }
+    _emitSessionUpdate();
+
+    return true;
+  }
+
+  /// Unlocks and terminates the session via configured override friction.
+  Future<void> overrideSession({
+    required OverrideType type,
+    String? typedPhrase,
+    String? typedReason,
+    String? pin,
+  }) async {
+    await endSessionWithOverride(
+      type: type,
+      typedPhrase: typedPhrase,
+      typedReason: typedReason,
+      pin: pin,
     );
   }
 
@@ -379,6 +479,9 @@ class FocusEngine {
   }
 
   Future<void> _completeSessionNaturally() async {
+    if (_stateMachine.canTransitionTo(SessionState.expired)) {
+      _stateMachine.transitionTo(SessionState.expired);
+    }
     await _terminateSession(SessionState.completed);
     _emitAudit(
       eventType: 'session_complete',
@@ -401,6 +504,11 @@ class FocusEngine {
         state: finalState,
         overrideReason: reason,
       );
+      if (_sessionRepository != null) {
+        try {
+          await _sessionRepository.updateSession(_currentSession!);
+        } catch (_) {}
+      }
       _emitSessionUpdate();
     }
   }
@@ -568,6 +676,37 @@ class FocusEngine {
         sessionId: _currentSession?.id,
       );
     }
+  }
+
+  /// Evaluates whether [packageName] is currently restricted under active session and profile.
+  bool isAppBlocked(String packageName) {
+    if (_currentSession == null ||
+        _currentSession!.state != SessionState.active) {
+      return false;
+    }
+
+    // Emergency callers are permanently unblockable by law and design
+    const emergencyPackages = [
+      'com.android.dialer',
+      'com.google.android.dialer',
+      'com.samsung.android.dialer',
+      'com.apple.mobilephone',
+      'com.android.server.telecom',
+    ];
+    if (emergencyPackages.contains(packageName)) {
+      return false;
+    }
+
+    if (_activeProfile != null) {
+      if (_activeProfile!.allowedPackageNames.contains(packageName)) {
+        return false;
+      }
+      if (_activeProfile!.blockedPackageNames.contains(packageName)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   void dispose() {

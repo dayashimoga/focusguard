@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focusguard/domain/models/app_info.dart';
+import 'package:focusguard/domain/models/enums.dart';
 import 'package:focusguard/domain/models/focus_profile.dart';
+import 'package:focusguard/domain/models/override_policy.dart';
 import 'package:focusguard/engine/focus_engine.dart';
 import 'package:focusguard/persistence/database_helper.dart';
 import 'package:focusguard/persistence/settings_repository.dart';
@@ -58,6 +60,12 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
+      engine.updateOverridePolicy(const OverridePolicy(
+        enabledOverrideTypes: [OverrideType.confirmationPhrase],
+        requireReason: true,
+        cooldownSeconds: 0,
+      ));
+
       await engine.startSession(
         profile: FocusProfile.defaultPresets.first,
         durationMinutes: 45,
@@ -96,10 +104,11 @@ void main() {
           textFields.at(1), 'Legitimate urgent task requiring phone');
       await tester.pumpAndSettle();
 
-      // Tap Unlock
-      final unlockBtn = find.widgetWithText(ElevatedButton, 'Unlock');
-      expect(unlockBtn, findsOneWidget);
-      await tester.tap(unlockBtn);
+      // Tap Confirm & End Session
+      final confirmBtn =
+          find.widgetWithText(ElevatedButton, 'Confirm & End Session');
+      expect(confirmBtn, findsOneWidget);
+      await tester.tap(confirmBtn);
       await tester.pumpAndSettle();
     });
 

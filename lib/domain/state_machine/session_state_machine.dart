@@ -15,13 +15,37 @@ class SessionStateMachine {
     SessionState.gracePeriod: {SessionState.active, SessionState.cancelled},
     SessionState.active: {
       SessionState.onBreak,
+      SessionState.overrideRequested,
+      SessionState.overrideValidating,
+      SessionState.ending,
       SessionState.overridden,
-      SessionState.completed
+      SessionState.expired,
+      SessionState.completed,
     },
     SessionState.onBreak: {
       SessionState.active,
+      SessionState.overrideRequested,
+      SessionState.overrideValidating,
+      SessionState.ending,
       SessionState.overridden,
-      SessionState.completed
+      SessionState.completed,
+    },
+    SessionState.overrideRequested: {
+      SessionState.overrideValidating,
+      SessionState.active,
+      SessionState.ending,
+    },
+    SessionState.overrideValidating: {
+      SessionState.ending,
+      SessionState.active,
+    },
+    SessionState.ending: {
+      SessionState.overridden,
+      SessionState.completed,
+    },
+    SessionState.expired: {
+      SessionState.completed,
+      SessionState.ending,
     },
     SessionState.overridden: {SessionState.idle},
     SessionState.completed: {SessionState.idle},

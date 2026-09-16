@@ -4,6 +4,7 @@ import '../../domain/models/enums.dart';
 import '../../domain/models/focus_session.dart';
 import '../../engine/focus_engine.dart';
 import '../widgets/circular_timer_ring.dart';
+import '../widgets/exit_focus_dialog.dart';
 import 'permissions_screen.dart';
 
 /// Screen displayed during an ongoing focus session.
@@ -331,87 +332,10 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
   }
 
   void _showOverrideDialog(BuildContext context) {
-    final phraseController = TextEditingController();
-    final reasonController = TextEditingController();
-
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppConstants.darkCard,
-        title: const Text('Exit Focus Session',
-            style: TextStyle(color: Colors.white)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Type the confirmation phrase to deliberately interrupt focus:',
-                style: TextStyle(
-                    color: AppConstants.textSecondaryDark, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppConstants.darkSurface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  AppConstants.defaultSafetyPhrase,
-                  style: TextStyle(
-                      color: AppConstants.primaryLight,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phraseController,
-                decoration: const InputDecoration(hintText: 'Type phrase here'),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Reason for early exit:',
-                style: TextStyle(
-                    color: AppConstants.textSecondaryDark, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: reasonController,
-                decoration: const InputDecoration(
-                    hintText: 'Why do you need to break focus?'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Keep Focusing'),
-          ),
-          ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppConstants.error),
-            onPressed: () async {
-              try {
-                await widget.focusEngine.overrideSession(
-                  type: OverrideType.confirmationPhrase,
-                  typedPhrase: phraseController.text,
-                  typedReason: reasonController.text,
-                );
-                if (context.mounted) Navigator.of(context).pop();
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
-                  );
-                }
-              }
-            },
-            child: const Text('Unlock'),
-          ),
-        ],
+      builder: (_) => ExitFocusDialog(
+        focusEngine: widget.focusEngine,
       ),
     );
   }

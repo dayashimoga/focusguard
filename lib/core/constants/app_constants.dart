@@ -33,6 +33,7 @@ class AppConstants {
   static const Color primaryDark = Color(0xFF4F46E5);
 
   static const Color accent = Color(0xFF10B981); // Emerald Green
+  static const Color success = Color(0xFF10B981);
   static const Color warning = Color(0xFFF59E0B); // Amber
   static const Color error = Color(0xFFEF4444); // Crimson Red
   static const Color emergency = Color(0xFFDC2626); // Deep Emergency Red
