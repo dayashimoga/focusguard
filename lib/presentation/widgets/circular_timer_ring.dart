@@ -44,29 +44,35 @@ class CircularTimerRing extends StatelessWidget {
               trackColor: trackColor,
             ),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                timeFormatted,
-                style: TextStyle(
-                  fontSize: size * 0.16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  color: Colors.white,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+          Padding(
+            padding: EdgeInsets.all(size * 0.12),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    timeFormatted,
+                    style: TextStyle(
+                      fontSize: size * 0.16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: Colors.white,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle ?? '${(progress * 100).toInt()}% completed',
+                    style: TextStyle(
+                      fontSize: size * 0.055,
+                      fontWeight: FontWeight.w500,
+                      color: AppConstants.textSecondaryDark,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle ?? '${(progress * 100).toInt()}% completed',
-                style: TextStyle(
-                  fontSize: size * 0.055,
-                  fontWeight: FontWeight.w500,
-                  color: AppConstants.textSecondaryDark,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

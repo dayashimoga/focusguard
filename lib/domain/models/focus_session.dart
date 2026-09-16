@@ -129,18 +129,18 @@ class FocusSession {
 
   factory FocusSession.fromMap(Map<String, dynamic> map) {
     return FocusSession(
-      id: map['id'] as String,
-      profileId: map['profileId'] as String,
-      profileName: map['profileName'] as String,
+      id: (map['id'] as String?) ?? 'corrupted_session',
+      profileId: (map['profileId'] as String?) ?? 'corrupted_profile',
+      profileName: (map['profileName'] as String?) ?? 'Restored Session',
       restrictionStrength: RestrictionStrength.values.firstWhere(
         (e) => e.name == map['restrictionStrength'],
         orElse: () => RestrictionStrength.focus,
       ),
-      totalDurationSeconds: (map['totalDurationSeconds'] as num).toInt(),
-      monotonicStartMs: (map['monotonicStartMs'] as num).toInt(),
-      monotonicTargetMs: (map['monotonicTargetMs'] as num).toInt(),
-      wallClockStartMs: (map['wallClockStartMs'] as num).toInt(),
-      wallClockTargetMs: (map['wallClockTargetMs'] as num).toInt(),
+      totalDurationSeconds: (map['totalDurationSeconds'] as num?)?.toInt() ?? 0,
+      monotonicStartMs: (map['monotonicStartMs'] as num?)?.toInt() ?? 0,
+      monotonicTargetMs: (map['monotonicTargetMs'] as num?)?.toInt() ?? 0,
+      wallClockStartMs: (map['wallClockStartMs'] as num?)?.toInt() ?? 0,
+      wallClockTargetMs: (map['wallClockTargetMs'] as num?)?.toInt() ?? 0,
       state: SessionState.values.firstWhere(
         (e) => e.name == map['state'],
         orElse: () => SessionState.idle,

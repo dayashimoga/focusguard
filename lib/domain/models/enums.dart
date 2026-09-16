@@ -79,11 +79,30 @@ enum AppCategory {
 
 /// Verification classification mandated by specification.
 enum VerificationClassification {
+  /// Source and metadata structures are formally validated.
+  METADATA_VALID,
+
+  /// Validated with automated test evidence in clean container environment.
   VERIFIED,
+
+  /// Validated with automated test evidence on Android Emulator.
   EMULATOR_VERIFIED,
+
+  /// Validated with automated test evidence on physical target device.
   DEVICE_VERIFIED,
+
+  /// Implemented in native/Dart code but awaiting platform runtime execution.
   IMPLEMENTED_UNVERIFIED,
+
+  /// Requires physical device hardware features (e.g. OEM battery optimization, hardware clock benchmark).
   HARDWARE_REQUIRED,
+
+  /// Requires external developer account, provisioning profile, or vendor entitlement (e.g. Apple FamilyControls).
+  EXTERNAL_ENTITLEMENT_REQUIRED,
+
+  /// OS sandbox or platform guidelines strictly prohibit this capability (e.g. iOS accessibility app switching).
   PLATFORM_UNSUPPORTED,
+
+  /// Automated verification failed.
   FAILED,
 }

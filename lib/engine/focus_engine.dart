@@ -3,6 +3,7 @@ import '../core/constants/app_constants.dart';
 import '../core/security/tamper_detector.dart';
 import '../core/utils/monotonic_time.dart';
 import '../domain/models/audit_entry.dart';
+import '../domain/models/degradation_report.dart';
 import '../domain/models/enums.dart';
 import '../domain/models/focus_profile.dart';
 import '../domain/models/focus_session.dart';
@@ -23,6 +24,10 @@ class FocusEngine {
   MonotonicCountdownTimer? _countdownTimer;
   late final BreakManager _breakManager;
   late OverrideCoordinator _overrideCoordinator;
+
+  DegradationReport _currentDegradation = DegradationReport.healthy();
+  final StreamController<DegradationReport> _degradationController =
+      StreamController<DegradationReport>.broadcast();
 
   final StreamController<FocusSession?> _sessionController =
       StreamController<FocusSession?>.broadcast();
@@ -52,6 +57,11 @@ class FocusEngine {
           _currentSession!.state == SessionState.gracePeriod ||
           _currentSession!.state == SessionState.onBreak);
 
+  DegradationReport get currentDegradation => _currentDegradation;
+  bool get isProtectionDegraded => _currentDegradation.isDegraded;
+  Stream<DegradationReport> get degradationStream =>
+      _degradationController.stream;
+
   Stream<FocusSession?> get sessionStream => _sessionController.stream;
   Stream<TamperCheckResult> get tamperAlertStream => _tamperController.stream;
   Stream<AuditEntry> get auditStream => _auditController.stream;
@@ -77,6 +87,7 @@ class FocusEngine {
     if (hasActiveSession) {
       throw StateError('A focus session is already active');
     }
+    _stateMachine.reset();
 
     final totalSeconds = durationMinutes * 60;
     final nowMonotonic = getMonotonicNowMs();
@@ -123,6 +134,13 @@ class FocusEngine {
     }
 
     return session;
+  }
+
+  /// Restores session state in memory (for testing and manual state restoration).
+  void restoreSession(FocusSession session) {
+    _currentSession = session;
+    _stateMachine.forceState(session.state);
+    _emitSessionUpdate();
   }
 
   /// Cancels session during the grace period before hard enforcement begins.
@@ -316,6 +334,16 @@ class FocusEngine {
       throw StateError(validation.errorMessage ?? 'Override rejected');
     }
 
+    // Increment daily used overrides count
+    final updatedPolicy = _overrideCoordinator.policy.copyWith(
+      usedOverridesToday: _overrideCoordinator.policy.usedOverridesToday + 1,
+    );
+    _overrideCoordinator = OverrideCoordinator(
+      policy: updatedPolicy,
+      storedPinHash: _overrideCoordinator.storedPinHash,
+      storedPinSalt: _overrideCoordinator.storedPinSalt,
+    );
+
     await _terminateSession(SessionState.overridden,
         reason: typedReason ?? type.name);
 
@@ -450,6 +478,98 @@ class FocusEngine {
     _auditController.add(entry);
   }
 
+  /// Evaluates platform enforcement capabilities and updates the degradation state.
+  Future<DegradationReport> checkProtectionHealth() async {
+    try {
+      final caps = await platformBridge.getCapabilities();
+      final isAndroid = caps['platform'] == 'android';
+      final hasUsage = caps['hasUsageStatsPermission'] == true;
+      final hasOverlay = caps['hasOverlayPermission'] == true;
+      final isEnforcing = caps['isEnforcementRunning'] == true;
+
+      final missing = <String>[];
+      final affected = <String>[];
+      final remediation = <String>[];
+
+      if (isAndroid) {
+        if (!hasUsage) {
+          missing.add('PACKAGE_USAGE_STATS');
+          affected.add('Foreground app detection and usage tracking disabled');
+          remediation.add(
+              'Open Android Settings > Usage Access and enable FocusGuard');
+        }
+        if (!hasOverlay) {
+          missing.add('SYSTEM_ALERT_WINDOW');
+          affected.add('Fullscreen block screen overlay barrier disabled');
+          remediation.add(
+              'Open Android Settings > Display over other apps and enable FocusGuard');
+        }
+      }
+
+      if (hasActiveSession &&
+          !isEnforcing &&
+          caps['platform'] != 'mock' &&
+          missing.isEmpty) {
+        affected.add('Foreground enforcement service is not currently running');
+        remediation
+            .add('Tap Restore Protection to restart the enforcement service');
+      }
+
+      final report = missing.isNotEmpty ||
+              (hasActiveSession &&
+                  !isEnforcing &&
+                  caps['platform'] != 'mock' &&
+                  affected.isNotEmpty)
+          ? DegradationReport.degraded(
+              missingPermissions: missing,
+              affectedMechanisms: affected,
+              remediationInstructions: remediation,
+              timestampMs: DateTime.now().millisecondsSinceEpoch,
+            )
+          : DegradationReport.healthy();
+
+      if (_currentDegradation.isDegraded != report.isDegraded ||
+          _currentDegradation.missingPermissions.length !=
+              report.missingPermissions.length) {
+        _currentDegradation = report;
+        _degradationController.add(report);
+        if (report.isDegraded) {
+          _emitAudit(
+            eventType: 'protection_degraded',
+            description:
+                'Protection degraded: missing ${report.missingPermissions.join(", ")}',
+            sessionId: _currentSession?.id,
+          );
+        }
+      }
+      return report;
+    } catch (e) {
+      final report = DegradationReport.degraded(
+        missingPermissions: ['PLATFORM_COMMUNICATION_ERROR'],
+        affectedMechanisms: [
+          'Platform method channel communication failed: $e'
+        ],
+        remediationInstructions: ['Restart FocusGuard or check OS permissions'],
+      );
+      _currentDegradation = report;
+      _degradationController.add(report);
+      return report;
+    }
+  }
+
+  /// Explicitly sets or simulates degradation (useful for adversarial testing & recovery).
+  void setDegradation(DegradationReport report) {
+    _currentDegradation = report;
+    _degradationController.add(report);
+    if (report.isDegraded) {
+      _emitAudit(
+        eventType: 'protection_degraded',
+        description: 'Protection degraded: ${report.missingPermissions}',
+        sessionId: _currentSession?.id,
+      );
+    }
+  }
+
   void dispose() {
     _gracePeriodTimer?.cancel();
     _countdownTimer?.dispose();
@@ -457,5 +577,6 @@ class FocusEngine {
     _sessionController.close();
     _tamperController.close();
     _auditController.close();
+    _degradationController.close();
   }
 }

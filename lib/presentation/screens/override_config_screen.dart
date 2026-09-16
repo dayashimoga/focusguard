@@ -225,8 +225,14 @@ class _OverrideConfigScreenState extends State<OverrideConfigScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Maximum overrides allowed per day:',
-                      style: TextStyle(color: Colors.white)),
+                  const Expanded(
+                    child: Text(
+                      'Maximum overrides allowed per day:',
+                      style: TextStyle(color: Colors.white),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   DropdownButton<int>(
                     value: _policy.maxOverridesPerDay,
                     dropdownColor: AppConstants.darkCard,

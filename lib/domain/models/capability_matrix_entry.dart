@@ -8,6 +8,10 @@ class CapabilityMatrixEntry {
   final String requirement;
   final String enforcementLevel;
   final VerificationClassification verified;
+  final String testId;
+  final String evidenceArtifact;
+  final String executionEnvironment;
+  final int timestampMs;
   final String notes;
 
   const CapabilityMatrixEntry({
@@ -17,6 +21,10 @@ class CapabilityMatrixEntry {
     required this.requirement,
     required this.enforcementLevel,
     required this.verified,
+    this.testId = 'N/A',
+    this.evidenceArtifact = 'N/A',
+    this.executionEnvironment = 'clean_container',
+    this.timestampMs = 0,
     required this.notes,
   });
 
@@ -28,6 +36,10 @@ class CapabilityMatrixEntry {
       'requirement': requirement,
       'enforcementLevel': enforcementLevel,
       'verified': verified.name,
+      'testId': testId,
+      'evidenceArtifact': evidenceArtifact,
+      'executionEnvironment': executionEnvironment,
+      'timestampMs': timestampMs,
       'notes': notes,
     };
   }
@@ -43,6 +55,11 @@ class CapabilityMatrixEntry {
         (e) => e.name == map['verified'],
         orElse: () => VerificationClassification.IMPLEMENTED_UNVERIFIED,
       ),
+      testId: map['testId'] as String? ?? 'N/A',
+      evidenceArtifact: map['evidenceArtifact'] as String? ?? 'N/A',
+      executionEnvironment:
+          map['executionEnvironment'] as String? ?? 'clean_container',
+      timestampMs: map['timestampMs'] as int? ?? 0,
       notes: map['notes'] as String? ?? '',
     );
   }

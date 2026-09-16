@@ -116,14 +116,17 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
             color: AppConstants.darkCard,
             child: Row(
               children: [
-                Text(
-                  '${_blockedPackages.length} Apps Selected to Block',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 13),
+                Expanded(
+                  child: Text(
+                    '${_blockedPackages.length} Apps Selected to Block',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 TextButton(
                   onPressed: () {
                     setState(() {
@@ -170,10 +173,15 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
                         },
                         title: Row(
                           children: [
-                            Text(app.appName,
+                            Expanded(
+                              child: Text(
+                                app.appName,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white)),
+                                    color: Colors.white),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                             if (app.isEssential) ...[
                               const SizedBox(width: 8),
                               Container(

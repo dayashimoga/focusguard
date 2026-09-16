@@ -176,6 +176,7 @@ class _StartFocusScreenState extends State<StartFocusScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<RestrictionStrength>(
               value: _selectedStrength,
+              isExpanded: true,
               decoration: InputDecoration(
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -186,6 +187,7 @@ class _StartFocusScreenState extends State<StartFocusScreen> {
                   child: Text(
                     _formatStrengthName(strength),
                     style: const TextStyle(color: Colors.white),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 );
               }).toList(),

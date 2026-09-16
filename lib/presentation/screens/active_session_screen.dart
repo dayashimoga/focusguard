@@ -4,6 +4,7 @@ import '../../domain/models/enums.dart';
 import '../../domain/models/focus_session.dart';
 import '../../engine/focus_engine.dart';
 import '../widgets/circular_timer_ring.dart';
+import 'permissions_screen.dart';
 
 /// Screen displayed during an ongoing focus session.
 /// Displays monotonic countdown, distraction stats, break controls, and safety override flows.
@@ -36,6 +37,7 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             session.getRemainingSeconds(widget.focusEngine.getMonotonicNowMs());
         final isGracePeriod = session.state == SessionState.gracePeriod;
         final isOnBreak = session.state == SessionState.onBreak;
+        final isDegraded = widget.focusEngine.isProtectionDegraded;
 
         return Scaffold(
           appBar: AppBar(
@@ -54,39 +56,53 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               children: [
+                if (isDegraded) ...[
+                  _buildDegradedProtectionWarning(context),
+                  const SizedBox(height: 20),
+                ],
+
                 // Status Badge
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isGracePeriod
-                        ? AppConstants.warning.withOpacity(0.2)
-                        : isOnBreak
-                            ? AppConstants.accent.withOpacity(0.2)
-                            : AppConstants.primary.withOpacity(0.2),
+                    color: isDegraded
+                        ? Colors.red.shade900.withOpacity(0.4)
+                        : isGracePeriod
+                            ? AppConstants.warning.withOpacity(0.2)
+                            : isOnBreak
+                                ? AppConstants.accent.withOpacity(0.2)
+                                : AppConstants.primary.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isGracePeriod
-                          ? AppConstants.warning
-                          : isOnBreak
-                              ? AppConstants.accent
-                              : AppConstants.primary,
+                      color: isDegraded
+                          ? Colors.redAccent
+                          : isGracePeriod
+                              ? AppConstants.warning
+                              : isOnBreak
+                                  ? AppConstants.accent
+                                  : AppConstants.primary,
+                      width: isDegraded ? 2 : 1,
                     ),
                   ),
                   child: Text(
-                    isGracePeriod
-                        ? 'GRACE PERIOD (TAP TO CANCEL)'
-                        : isOnBreak
-                            ? 'TEMPORARY BREAK ACTIVE'
-                            : 'ENFORCEMENT ACTIVE • ${session.restrictionStrength.name.toUpperCase()}',
+                    isDegraded
+                        ? 'PROTECTION DEGRADED • ENFORCEMENT SUSPENDED'
+                        : isGracePeriod
+                            ? 'GRACE PERIOD (TAP TO CANCEL)'
+                            : isOnBreak
+                                ? 'TEMPORARY BREAK ACTIVE'
+                                : 'ENFORCEMENT ACTIVE • ${session.restrictionStrength.name.toUpperCase()}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: isGracePeriod
-                          ? AppConstants.warning
-                          : isOnBreak
-                              ? AppConstants.accent
-                              : AppConstants.primaryLight,
+                      color: isDegraded
+                          ? Colors.redAccent
+                          : isGracePeriod
+                              ? AppConstants.warning
+                              : isOnBreak
+                                  ? AppConstants.accent
+                                  : AppConstants.primaryLight,
                     ),
                   ),
                 ),
@@ -394,6 +410,71 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
               }
             },
             child: const Text('Unlock'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDegradedProtectionWarning(BuildContext context) {
+    final degradation = widget.focusEngine.currentDegradation;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF450A0A).withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.redAccent, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.gpp_bad, color: Colors.amberAccent, size: 24),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'PROTECTION DEGRADED',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            degradation.affectedMechanisms.isNotEmpty
+                ? degradation.affectedMechanisms.join('. ')
+                : 'Enforcement barriers are disabled due to missing system permissions.',
+            style: const TextStyle(color: Color(0xFFF1F5F9), fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PermissionsScreen(
+                        platformBridge: widget.focusEngine.platformBridge),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.settings, size: 16),
+              label: const Text('Restore Enforcement Permissions',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            ),
           ),
         ],
       ),

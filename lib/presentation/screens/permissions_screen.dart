@@ -78,11 +78,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                             Icon(Icons.health_and_safety,
                                 color: AppConstants.accent, size: 24),
                             SizedBox(width: 10),
-                            Text('Enforcement Health',
-                                style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white)),
+                            Expanded(
+                              child: Text('Enforcement Health',
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white),
+                                  overflow: TextOverflow.ellipsis),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -240,6 +243,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         statusColor = AppConstants.accent;
         break;
       case VerificationClassification.HARDWARE_REQUIRED:
+      case VerificationClassification.EXTERNAL_ENTITLEMENT_REQUIRED:
         statusColor = AppConstants.warning;
         break;
       case VerificationClassification.PLATFORM_UNSUPPORTED:
@@ -247,6 +251,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         statusColor = AppConstants.error;
         break;
       case VerificationClassification.IMPLEMENTED_UNVERIFIED:
+      case VerificationClassification.METADATA_VALID:
         statusColor = AppConstants.primaryLight;
         break;
     }

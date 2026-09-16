@@ -58,11 +58,11 @@ class UsageInsightsScreen extends StatelessWidget {
                           color: Colors.white)),
                   const SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildMetricItem('This Week', '12h 10m'),
-                      _buildMetricItem('Completion Rate', '92%'),
-                      _buildMetricItem('Overrides', '2 exits'),
+                      Expanded(child: _buildMetricItem('This Week', '12h 10m')),
+                      Expanded(
+                          child: _buildMetricItem('Completion Rate', '92%')),
+                      Expanded(child: _buildMetricItem('Overrides', '2 exits')),
                     ],
                   ),
                 ],
@@ -136,16 +136,25 @@ class UsageInsightsScreen extends StatelessWidget {
   Widget _buildMetricItem(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 11, color: AppConstants.textSecondaryDark)),
+        Text(
+          label,
+          style: const TextStyle(
+              fontSize: 11, color: AppConstants.textSecondaryDark),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
         const SizedBox(height: 4),
-        Text(value,
-            style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppConstants.primaryLight)),
+        Text(
+          value,
+          style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppConstants.primaryLight),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
       ],
     );
   }

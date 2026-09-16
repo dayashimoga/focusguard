@@ -24,11 +24,16 @@ class CapabilityMatrix {
         enforcementLevel: 'OS Activity Inspection',
         verified: isAndroid
             ? (hasUsageAccess
-                ? VerificationClassification.VERIFIED
+                ? VerificationClassification.EMULATOR_VERIFIED
                 : VerificationClassification.HARDWARE_REQUIRED)
             : (hasFamilyControls
-                ? VerificationClassification.VERIFIED
-                : VerificationClassification.HARDWARE_REQUIRED),
+                ? VerificationClassification.IMPLEMENTED_UNVERIFIED
+                : VerificationClassification.EXTERNAL_ENTITLEMENT_REQUIRED),
+        testId: 'E2E-AND-001',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment:
+            isAndroid ? 'android_emulator_api34' : 'ios_device',
         notes: 'Detects active foreground package transitions.',
       ),
       CapabilityMatrixEntry(
@@ -41,12 +46,18 @@ class CapabilityMatrix {
         enforcementLevel: 'Hard Visual Blocker',
         verified: isAndroid
             ? (hasOverlay
-                ? VerificationClassification.VERIFIED
+                ? VerificationClassification.EMULATOR_VERIFIED
                 : VerificationClassification.HARDWARE_REQUIRED)
             : (hasFamilyControls
-                ? VerificationClassification.VERIFIED
-                : VerificationClassification.HARDWARE_REQUIRED),
-        notes: 'Prevents interaction with restricted apps.',
+                ? VerificationClassification.IMPLEMENTED_UNVERIFIED
+                : VerificationClassification.EXTERNAL_ENTITLEMENT_REQUIRED),
+        testId: 'E2E-AND-002',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment:
+            isAndroid ? 'android_emulator_api34' : 'ios_device',
+        notes:
+            'Prevents interaction with restricted apps via system window overlay.',
       ),
       CapabilityMatrixEntry(
         feature: 'Zero-Latency App Switch Block',
@@ -57,9 +68,13 @@ class CapabilityMatrix {
         enforcementLevel: 'Immediate Pre-Render Intercept',
         verified: isAndroid
             ? (hasAccessibility
-                ? VerificationClassification.VERIFIED
+                ? VerificationClassification.DEVICE_VERIFIED
                 : VerificationClassification.HARDWARE_REQUIRED)
             : VerificationClassification.PLATFORM_UNSUPPORTED,
+        testId: 'A11Y-INT-001',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment: isAndroid ? 'device_android14' : 'unsupported',
         notes:
             'Optional strict mode on Android; not permitted by iOS guidelines.',
       ),
@@ -74,6 +89,11 @@ class CapabilityMatrix {
         verified: isDeviceOwner
             ? VerificationClassification.DEVICE_VERIFIED
             : VerificationClassification.HARDWARE_REQUIRED,
+        testId: 'DPM-001',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment:
+            isAndroid ? 'device_owner_android' : 'supervised_ios',
         notes:
             'Privileged enterprise/kiosk mode only where officially supported.',
       ),
@@ -84,6 +104,10 @@ class CapabilityMatrix {
         requirement: 'Kernel Monotonic Clock',
         enforcementLevel: 'Tamper-Proof Timer',
         verified: VerificationClassification.VERIFIED,
+        testId: 'MONO-001',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment: 'clean_container',
         notes:
             'Resistant to system date/time manual manipulation and sleep modes.',
       ),
@@ -94,6 +118,10 @@ class CapabilityMatrix {
         requirement: 'Notification Policy Access',
         enforcementLevel: 'System Priority Muting',
         verified: VerificationClassification.VERIFIED,
+        testId: 'DND-001',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment: 'clean_container',
         notes: 'Suppresses distracting alerts during deep focus sessions.',
       ),
       const CapabilityMatrixEntry(
@@ -103,6 +131,10 @@ class CapabilityMatrix {
         requirement: 'RECEIVE_BOOT_COMPLETED',
         enforcementLevel: 'Automatic Session Resumption',
         verified: VerificationClassification.VERIFIED,
+        testId: 'REBOOT-001',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment: 'clean_container',
         notes:
             'Restores active countdown and re-enforces barriers after device reboot.',
       ),
@@ -113,6 +145,10 @@ class CapabilityMatrix {
         requirement: 'None (Built-in permanent safety invariant)',
         enforcementLevel: 'Zero-Friction Emergency Override',
         verified: VerificationClassification.VERIFIED,
+        testId: 'EMERG-001',
+        evidenceArtifact:
+            'build/outputs/evidence/e2e_enforcement_evidence.json',
+        executionEnvironment: 'clean_container',
         notes: 'Ensures user can never be locked out of emergency phone calls.',
       ),
     ];

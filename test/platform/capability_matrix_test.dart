@@ -46,7 +46,7 @@ void main() {
     });
 
     test(
-        'marks Monotonic Clock and Emergency Exemption as permanently VERIFIED',
+        'marks Monotonic Clock and Emergency Exemption as permanently VERIFIED with evidence',
         () {
       final matrix = CapabilityMatrix.getMatrix();
       final mono = matrix.firstWhere((e) => e.feature.contains('Monotonic'));
@@ -54,7 +54,22 @@ void main() {
           matrix.firstWhere((e) => e.feature.contains('Emergency'));
 
       expect(mono.verified, equals(VerificationClassification.VERIFIED));
+      expect(mono.testId, equals('MONO-001'));
+      expect(mono.evidenceArtifact, contains('e2e_enforcement_evidence.json'));
+
       expect(emergency.verified, equals(VerificationClassification.VERIFIED));
+      expect(emergency.testId, equals('EMERG-001'));
+    });
+
+    test(
+        'classifies iOS Screen Time without FamilyControls as EXTERNAL_ENTITLEMENT_REQUIRED',
+        () {
+      final matrix = CapabilityMatrix.getMatrix(
+          isAndroid: false, hasFamilyControls: false);
+      final detectionEntry = matrix
+          .firstWhere((e) => e.feature.contains('Foreground App Detection'));
+      expect(detectionEntry.verified,
+          equals(VerificationClassification.EXTERNAL_ENTITLEMENT_REQUIRED));
     });
   });
 }

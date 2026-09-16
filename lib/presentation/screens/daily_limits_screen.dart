@@ -83,15 +83,18 @@ class _DailyLimitsScreenState extends State<DailyLimitsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.phone_android,
-                          color: AppConstants.primaryLight),
-                      SizedBox(width: 10),
-                      Text(
-                        'Total Device Screen Time Limit',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white),
+                      Icon(Icons.pie_chart_outline,
+                          color: AppConstants.accent, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Total Device Screen Time Limit',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -105,17 +108,29 @@ class _DailyLimitsScreenState extends State<DailyLimitsScreen> {
                   ),
                   SizedBox(height: 8),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Used: 2h 36m',
+                      Expanded(
+                        child: Text(
+                          'Used: 2h 36m',
                           style: TextStyle(
                               color: AppConstants.textSecondaryDark,
-                              fontSize: 13)),
-                      Text('Limit: 4h 00m',
+                              fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Limit: 4h 00m',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
-                              fontSize: 13)),
+                              fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -150,29 +165,37 @@ class _DailyLimitsScreenState extends State<DailyLimitsScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            limit.appName,
-                            style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
+                          Expanded(
                             child: Text(
-                              isExhausted
-                                  ? 'LIMIT REACHED'
-                                  : '${limit.remainingMinutes}m left',
-                              style: TextStyle(
-                                  fontSize: 11,
+                              limit.appName,
+                              style: const TextStyle(
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w700,
-                                  color: color),
+                                  color: Colors.white),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isExhausted
+                                    ? 'LIMIT REACHED'
+                                    : '${limit.remainingMinutes}m left',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: color),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
                         ],
@@ -191,12 +214,16 @@ class _DailyLimitsScreenState extends State<DailyLimitsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '${limit.usedMinutes} of ${limit.limitMinutes} min used today',
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: AppConstants.textSecondaryDark),
+                          Expanded(
+                            child: Text(
+                              '${limit.usedMinutes} of ${limit.limitMinutes} min used today',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppConstants.textSecondaryDark),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             '${(limit.progressFraction * 100).toInt()}%',
                             style: TextStyle(
