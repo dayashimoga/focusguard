@@ -29,15 +29,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Flutter 3.24.3
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.3'
           channel: 'stable'
           cache: true
+
+      - name: Configure Android SDK Environment & Licenses
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          flutter config --android-sdk /usr/local/lib/android/sdk
+          if [ -d "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" ]; then
+            yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          elif command -v sdkmanager &> /dev/null; then
+            yes | sdkmanager --licenses || true
+          fi
 
       - name: Verify Environment
         run: |
